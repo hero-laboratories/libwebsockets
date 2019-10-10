@@ -46,6 +46,7 @@ enum lws_client_connect_ssl_connection_flags {
 	LCCSCF_H2_HEXIFY_AUTH_TOKEN		= (1 << 8),
 	LCCSCF_HTTP_MULTIPART_MIME		= (1 << 9),
 	LCCSCF_HTTP_X_WWW_FORM_URLENCODED	= (1 << 10),
+	LCCSCF_H2_QUIRK_UNCLEAN_HPACK_STATE	= (1 << 11),
 
 	LCCSCF_PIPELINE				= (1 << 16),
 		/**< Serialize / pipeline multiple client connections
