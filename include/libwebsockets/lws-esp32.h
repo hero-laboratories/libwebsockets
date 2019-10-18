@@ -41,7 +41,8 @@ struct pollfd {
 #include <string.h>
 #include "esp_wifi.h"
 #include "esp_system.h"
-#include "esp_event.h"
+//HL_CHANGE
+#include "esp_event_legacy.h"
 #include "esp_event_loop.h"
 #include "nvs.h"
 #include "driver/gpio.h"
