@@ -26,10 +26,9 @@ int lws_plat_apply_FD_CLOEXEC(int n)
 	return 0;
 }
 
-
 LWS_VISIBLE lws_fop_fd_t IRAM_ATTR
 _lws_plat_file_open(const struct lws_plat_file_ops *fops, const char *filename,
-		    const char *vpath, lws_fop_flags_t *flags)
+					const char *vpath, lws_fop_flags_t *flags)
 {
 	struct stat stat_buf;
 	lws_fop_fd_t fop_fd;
@@ -79,12 +78,13 @@ _lws_plat_file_seek_cur(lws_fop_fd_t fops_fd, lws_fileofs_t offset)
 
 LWS_VISIBLE int IRAM_ATTR
 _lws_plat_file_read(lws_fop_fd_t fops_fd, lws_filepos_t *amount,
-		    uint8_t *buf, lws_filepos_t len)
+					uint8_t *buf, lws_filepos_t len)
 {
 	long n;
 
 	n = read(fops_fd->fd, buf, len);
-	if (n == -1) {
+	if (n == -1)
+	{
 		*amount = 0;
 		return -1;
 	}
@@ -96,12 +96,13 @@ _lws_plat_file_read(lws_fop_fd_t fops_fd, lws_filepos_t *amount,
 
 LWS_VISIBLE int IRAM_ATTR
 _lws_plat_file_write(lws_fop_fd_t fops_fd, lws_filepos_t *amount,
-		     uint8_t *buf, lws_filepos_t len)
+					 uint8_t *buf, lws_filepos_t len)
 {
 	long n;
 
 	n = write(fops_fd->fd, buf, len);
-	if (n == -1) {
+	if (n == -1)
+	{
 		*amount = 0;
 		return -1;
 	}
@@ -111,8 +112,7 @@ _lws_plat_file_write(lws_fop_fd_t fops_fd, lws_filepos_t *amount,
 	return 0;
 }
 
-int
-lws_find_string_in_file(const char *filename, const char *string, int stringlen)
+int lws_find_string_in_file(const char *filename, const char *string, int stringlen)
 {
 	nvs_handle nvh;
 	size_t s;
@@ -141,14 +141,14 @@ lws_find_string_in_file(const char *filename, const char *string, int stringlen)
 	return !strcmp(p + 1, result);
 }
 
-
 LWS_VISIBLE int
 lws_plat_write_file(const char *filename, void *buf, int len)
 {
 	nvs_handle nvh;
 	int n;
 
-	if (nvs_open("lws-station", NVS_READWRITE, &nvh)) {
+	if (nvs_open("wsserver", NVS_READWRITE, &nvh))
+	{
 		lwsl_notice("%s: failed to open nvs\n", __func__);
 		return -1;
 	}
@@ -168,7 +168,7 @@ lws_plat_write_file(const char *filename, void *buf, int len)
 
 LWS_VISIBLE int
 lws_plat_write_cert(struct lws_vhost *vhost, int is_key, int fd, void *buf,
-			int len)
+					int len)
 {
 	const char *name = vhost->tls.alloc_cert_path;
 
@@ -185,12 +185,13 @@ lws_plat_read_file(const char *filename, void *buf, int len)
 	size_t s = 0;
 	int n = 0;
 
-	if (nvs_open("lws-station", NVS_READWRITE, &nvh)) {
+	if (nvs_open("wsserver", NVS_READWRITE, &nvh))
+	{
 		lwsl_notice("%s: failed to open nvs\n", __func__);
 		return 1;
 	}
 
-	ESP_ERROR_CHECK(nvs_open("lws-station", NVS_READWRITE, &nvh));
+	ESP_ERROR_CHECK(nvs_open("wsserver", NVS_READWRITE, &nvh));
 	if (nvs_get_blob(nvh, filename, NULL, &s) != ESP_OK)
 		goto bail;
 	if (s > (size_t)len)
@@ -212,4 +213,3 @@ bail:
 
 	return -1;
 }
-

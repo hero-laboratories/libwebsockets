@@ -22,17 +22,17 @@
 #include "core/private.h"
 
 #if defined(LWS_WITH_MBEDTLS) || (defined(OPENSSL_VERSION_NUMBER) && \
-				  OPENSSL_VERSION_NUMBER >= 0x10002000L)
+								  OPENSSL_VERSION_NUMBER >= 0x10002000L)
 static int
 alpn_cb(SSL *s, const unsigned char **out, unsigned char *outlen,
-	const unsigned char *in, unsigned int inlen, void *arg)
+		const unsigned char *in, unsigned int inlen, void *arg)
 {
 #if !defined(LWS_WITH_MBEDTLS)
 	struct alpn_ctx *alpn_ctx = (struct alpn_ctx *)arg;
 
 	if (SSL_select_next_proto((unsigned char **)out, outlen, alpn_ctx->data,
-				  alpn_ctx->len, in, inlen) !=
-	    OPENSSL_NPN_NEGOTIATED)
+							  alpn_ctx->len, in, inlen) !=
+		OPENSSL_NPN_NEGOTIATED)
 		return SSL_TLSEXT_ERR_NOACK;
 #endif
 
@@ -40,42 +40,41 @@ alpn_cb(SSL *s, const unsigned char **out, unsigned char *outlen,
 }
 #endif
 
-void
-lws_context_init_alpn(struct lws_vhost *vhost)
+void lws_context_init_alpn(struct lws_vhost *vhost)
 {
 #if defined(LWS_WITH_MBEDTLS) || (defined(OPENSSL_VERSION_NUMBER) && \
-				  OPENSSL_VERSION_NUMBER >= 0x10002000L)
+								  OPENSSL_VERSION_NUMBER >= 0x10002000L)
 	const char *alpn_comma = vhost->context->tls.alpn_default;
 
 	if (vhost->tls.alpn)
 		alpn_comma = vhost->tls.alpn;
 
 	lwsl_info(" Server '%s' advertising ALPN: %s\n",
-		    vhost->name, alpn_comma);
+			  vhost->name, alpn_comma);
 	vhost->tls.alpn_ctx.len = lws_alpn_comma_to_openssl(alpn_comma,
-					vhost->tls.alpn_ctx.data,
-					sizeof(vhost->tls.alpn_ctx.data) - 1);
+														vhost->tls.alpn_ctx.data,
+														sizeof(vhost->tls.alpn_ctx.data) - 1);
 
 	SSL_CTX_set_alpn_select_cb(vhost->tls.ssl_ctx, alpn_cb,
-				   &vhost->tls.alpn_ctx);
+							   &vhost->tls.alpn_ctx);
 #else
 	lwsl_err(
 		" HTTP2 / ALPN configured but not supported by OpenSSL 0x%lx\n",
-		    OPENSSL_VERSION_NUMBER);
+		OPENSSL_VERSION_NUMBER);
 #endif // OPENSSL_VERSION_NUMBER >= 0x10002000L
 }
 
-int
-lws_tls_server_conn_alpn(struct lws *wsi)
+int lws_tls_server_conn_alpn(struct lws *wsi)
 {
 #if defined(LWS_WITH_MBEDTLS) || (defined(OPENSSL_VERSION_NUMBER) && \
-				  OPENSSL_VERSION_NUMBER >= 0x10002000L)
+								  OPENSSL_VERSION_NUMBER >= 0x10002000L)
 	const unsigned char *name = NULL;
 	char cstr[10];
 	unsigned len;
 
 	SSL_get0_alpn_selected(wsi->tls.ssl, &name, &len);
-	if (!len) {
+	if (!len)
+	{
 		lwsl_info("no ALPN upgrade\n");
 		return 0;
 	}
@@ -97,15 +96,14 @@ lws_tls_server_conn_alpn(struct lws *wsi)
 
 LWS_VISIBLE int
 lws_context_init_server_ssl(const struct lws_context_creation_info *info,
-			    struct lws_vhost *vhost)
+							struct lws_vhost *vhost)
 {
 	struct lws_context *context = vhost->context;
 	struct lws wsi;
-
 	if (!lws_check_opt(info->options,
-			   LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT)) {
+					   LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT))
+	{
 		vhost->tls.use_ssl = 0;
-
 		return 0;
 	}
 
@@ -119,12 +117,10 @@ lws_context_init_server_ssl(const struct lws_context_creation_info *info,
 	 */
 	if (info->ssl_cert_filepath)
 		vhost->options |= LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX;
-
-	if (info->port != CONTEXT_PORT_NO_LISTEN) {
-
+	if (info->port != CONTEXT_PORT_NO_LISTEN)
+	{
 		vhost->tls.use_ssl = lws_check_opt(vhost->options,
-					LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX);
-
+										   LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX);
 		if (vhost->tls.use_ssl && info->ssl_cipher_list)
 			lwsl_notice(" SSL ciphers: '%s'\n",
 						info->ssl_cipher_list);
@@ -142,13 +138,12 @@ lws_context_init_server_ssl(const struct lws_context_creation_info *info,
 	memset(&wsi, 0, sizeof(wsi));
 	wsi.vhost = vhost; /* not a real bound wsi */
 	wsi.context = context;
-
 	/*
 	 * as a server, if we are requiring clients to identify themselves
 	 * then set the backend up for it
 	 */
 	if (lws_check_opt(info->options,
-			  LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT))
+					  LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT))
 		/* Normally SSL listener rejects non-ssl, optionally allow */
 		vhost->tls.allow_non_ssl_on_ssl_port = 1;
 
@@ -156,15 +151,16 @@ lws_context_init_server_ssl(const struct lws_context_creation_info *info,
 	 * give user code a chance to load certs into the server
 	 * allowing it to verify incoming client certs
 	 */
-	if (vhost->tls.use_ssl) {
+	if (vhost->tls.use_ssl)
+	{
 		if (lws_tls_server_vhost_backend_init(info, vhost, &wsi))
 			return -1;
 
 		lws_tls_server_client_cert_verify_config(vhost);
 
 		if (vhost->protocols[0].callback(&wsi,
-			    LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS,
-			    vhost->tls.ssl_ctx, vhost, 0))
+										 LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS,
+										 vhost->tls.ssl_ctx, vhost, 0))
 			return -1;
 	}
 
@@ -180,15 +176,16 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 	struct lws_context *context = wsi->context;
 	struct lws_context_per_thread *pt = &context->pt[(int)wsi->tsi];
 	struct lws_vhost *vh;
-        char buf[256];
+	char buf[256];
 	int n;
 
-        (void)buf;
+	(void)buf;
 
 	if (!LWS_SSL_ENABLED(wsi->vhost))
 		return 0;
 
-	switch (lwsi_state(wsi)) {
+	switch (lwsi_state(wsi))
+	{
 	case LRS_SSL_INIT:
 
 		if (wsi->tls.ssl)
@@ -196,21 +193,23 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 		if (accept_fd == LWS_SOCK_INVALID)
 			assert(0);
 		if (context->simultaneous_ssl_restriction &&
-		    context->simultaneous_ssl >=
-		    	    context->simultaneous_ssl_restriction) {
+			context->simultaneous_ssl >=
+				context->simultaneous_ssl_restriction)
+		{
 			lwsl_notice("unable to deal with SSL connection\n");
 			return 1;
 		}
 
-		if (lws_tls_server_new_nonblocking(wsi, accept_fd)) {
+		if (lws_tls_server_new_nonblocking(wsi, accept_fd))
+		{
 			if (accept_fd != LWS_SOCK_INVALID)
 				compatible_close(accept_fd);
 			goto fail;
 		}
 
 		if (context->simultaneous_ssl_restriction &&
-		    ++context->simultaneous_ssl ==
-				    context->simultaneous_ssl_restriction)
+			++context->simultaneous_ssl ==
+				context->simultaneous_ssl_restriction)
 			/* that was the last allowed SSL connection */
 			lws_gate_accepts(context, 0);
 
@@ -225,14 +224,15 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 		lwsi_set_state(wsi, LRS_SSL_ACK_PENDING);
 
 		lws_pt_lock(pt, __func__);
-		if (__insert_wsi_socket_into_fds(context, wsi)) {
+		if (__insert_wsi_socket_into_fds(context, wsi))
+		{
 			lwsl_err("%s: failed to insert into fds\n", __func__);
 			goto fail;
 		}
 		lws_pt_unlock(pt);
 
 		lws_set_timeout(wsi, PENDING_TIMEOUT_SSL_ACCEPT,
-				context->timeout_secs);
+						context->timeout_secs);
 
 		lwsl_debug("inserted SSL accept into fds, trying SSL_accept\n");
 
@@ -240,25 +240,28 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 
 	case LRS_SSL_ACK_PENDING:
 
-		if (lws_change_pollfd(wsi, LWS_POLLOUT, 0)) {
+		if (lws_change_pollfd(wsi, LWS_POLLOUT, 0))
+		{
 			lwsl_err("%s: lws_change_pollfd failed\n", __func__);
 			goto fail;
 		}
 
 		lws_latency_pre(context, wsi);
 
-		if (wsi->vhost->tls.allow_non_ssl_on_ssl_port) {
+		if (wsi->vhost->tls.allow_non_ssl_on_ssl_port)
+		{
 
 			n = recv(wsi->desc.sockfd, (char *)pt->serv_buf,
-				 context->pt_serv_buf_size, MSG_PEEK);
+					 context->pt_serv_buf_size, MSG_PEEK);
 
-		/*
+			/*
 		 * optionally allow non-SSL connect on SSL listening socket
 		 * This is disabled by default, if enabled it goes around any
 		 * SSL-level access control (eg, client-side certs) so leave
 		 * it disabled unless you know it's not a problem for you
 		 */
-			if (n >= 1 && pt->serv_buf[0] >= ' ') {
+			if (n >= 1 && pt->serv_buf[0] >= ' ')
+			{
 				/*
 				* TLS content-type for Handshake is 0x16, and
 				* for ChangeCipherSpec Record, it's 0x14
@@ -279,12 +282,13 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 				 */
 				wsi->tls.ssl = NULL;
 				if (lws_check_opt(context->options,
-				    LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS))
+								  LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS))
 					wsi->tls.redirect_to_https = 1;
 				lwsl_debug("accepted as non-ssl\n");
 				goto accepted;
 			}
-			if (!n) {
+			if (!n)
+			{
 				/*
 				 * connection is gone, fail out
 				 */
@@ -292,16 +296,18 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 				goto fail;
 			}
 			if (n < 0 && (LWS_ERRNO == LWS_EAGAIN ||
-				      LWS_ERRNO == LWS_EWOULDBLOCK)) {
+						  LWS_ERRNO == LWS_EWOULDBLOCK))
+			{
 				/*
 				 * well, we get no way to know ssl or not
 				 * so go around again waiting for something
 				 * to come and give us a hint, or timeout the
 				 * connection.
 				 */
-				if (lws_change_pollfd(wsi, 0, LWS_POLLIN)) {
+				if (lws_change_pollfd(wsi, 0, LWS_POLLIN))
+				{
 					lwsl_info("%s: change_pollfd failed\n",
-						  __func__);
+							  __func__);
 					return -1;
 				}
 
@@ -319,21 +325,22 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 #endif
 		errno = 0;
 		lws_stats_atomic_bump(wsi->context, pt,
-				      LWSSTATS_C_SSL_CONNECTIONS_ACCEPT_SPIN,
-				      1);
+							  LWSSTATS_C_SSL_CONNECTIONS_ACCEPT_SPIN,
+							  1);
 		n = lws_tls_server_accept(wsi);
 		lws_latency(context, wsi,
-			"SSL_accept LRS_SSL_ACK_PENDING\n", n, n == 1);
+					"SSL_accept LRS_SSL_ACK_PENDING\n", n, n == 1);
 		lwsl_info("SSL_accept says %d\n", n);
-		switch (n) {
+		switch (n)
+		{
 		case LWS_SSL_CAPABLE_DONE:
 			break;
 		case LWS_SSL_CAPABLE_ERROR:
 			lws_stats_atomic_bump(wsi->context, pt,
-					      LWSSTATS_C_SSL_CONNECTIONS_FAILED,
-					      1);
-	                lwsl_info("SSL_accept failed socket %u: %d\n",
-	                		wsi->desc.sockfd, n);
+								  LWSSTATS_C_SSL_CONNECTIONS_FAILED,
+								  1);
+			lwsl_info("SSL_accept failed socket %u: %d\n",
+					  wsi->desc.sockfd, n);
 			wsi->socket_is_permanently_unusable = 1;
 			goto fail;
 
@@ -342,23 +349,25 @@ lws_server_socket_service_ssl(struct lws *wsi, lws_sockfd_type accept_fd)
 		}
 
 		lws_stats_atomic_bump(wsi->context, pt,
-				      LWSSTATS_C_SSL_CONNECTIONS_ACCEPTED, 1);
+							  LWSSTATS_C_SSL_CONNECTIONS_ACCEPTED, 1);
 #if defined(LWS_WITH_STATS)
 		if (wsi->accept_start_us)
 			lws_stats_atomic_bump(wsi->context, pt,
-				      LWSSTATS_MS_SSL_CONNECTIONS_ACCEPTED_DELAY,
-				      lws_time_in_microseconds() -
-					      wsi->accept_start_us);
+								  LWSSTATS_MS_SSL_CONNECTIONS_ACCEPTED_DELAY,
+								  lws_time_in_microseconds() -
+									  wsi->accept_start_us);
 		wsi->accept_start_us = lws_time_in_microseconds();
 #endif
 
-accepted:
+	accepted:
 
 		/* adapt our vhost to match the SNI SSL_CTX that was chosen */
 		vh = context->vhost_list;
-		while (vh) {
+		while (vh)
+		{
 			if (!vh->being_destroyed && wsi->tls.ssl &&
-			    vh->tls.ssl_ctx == lws_tls_ctx_from_wsi(wsi)) {
+				vh->tls.ssl_ctx == lws_tls_ctx_from_wsi(wsi))
+			{
 				lwsl_info("setting wsi to vh %s\n", vh->name);
 				lws_vhost_bind_wsi(vh, wsi);
 				break;
@@ -368,7 +377,7 @@ accepted:
 
 		/* OK, we are accepted... give him some time to negotiate */
 		lws_set_timeout(wsi, PENDING_TIMEOUT_ESTABLISH_WITH_SERVER,
-				context->timeout_secs);
+						context->timeout_secs);
 
 		lwsi_set_state(wsi, LRS_ESTABLISHED);
 		if (lws_tls_server_conn_alpn(wsi))
@@ -385,4 +394,3 @@ accepted:
 fail:
 	return 1;
 }
-

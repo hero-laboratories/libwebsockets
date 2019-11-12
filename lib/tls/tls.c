@@ -27,27 +27,26 @@
  * returns nonzero if any tls guys had POLLIN faked
  */
 
-int
-lws_tls_fake_POLLIN_for_buffered(struct lws_context_per_thread *pt)
+int lws_tls_fake_POLLIN_for_buffered(struct lws_context_per_thread *pt)
 {
 	int ret = 0;
 
 	lws_start_foreach_dll_safe(struct lws_dll_lws *, p, p1,
-				   pt->tls.pending_tls_head.next) {
+							   pt->tls.pending_tls_head.next)
+	{
 		struct lws *wsi = lws_container_of(p, struct lws,
-						   tls.pending_tls_list);
+										   tls.pending_tls_list);
 
 		pt->fds[wsi->position_in_fds_table].revents |=
 			pt->fds[wsi->position_in_fds_table].events & LWS_POLLIN;
 		ret |= pt->fds[wsi->position_in_fds_table].revents & LWS_POLLIN;
-
-	} lws_end_foreach_dll_safe(p, p1);
+	}
+	lws_end_foreach_dll_safe(p, p1);
 
 	return !!ret;
 }
 
-void
-__lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
+void __lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
 {
 	if (lws_dll_is_null(&wsi->tls.pending_tls_list))
 		return;
@@ -55,8 +54,7 @@ __lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
 	lws_dll_lws_remove(&wsi->tls.pending_tls_list);
 }
 
-void
-lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
+void lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
 {
 	struct lws_context_per_thread *pt = &wsi->context->pt[(int)wsi->tsi];
 
@@ -67,23 +65,26 @@ lws_ssl_remove_wsi_from_buffered_list(struct lws *wsi)
 
 #if defined(LWS_WITH_ESP32)
 int alloc_file(struct lws_context *context, const char *filename, uint8_t **buf,
-	       lws_filepos_t *amount)
+			   lws_filepos_t *amount)
 {
 	nvs_handle nvh;
 	size_t s;
 	int n = 0;
 
-	ESP_ERROR_CHECK(nvs_open("lws-station", NVS_READWRITE, &nvh));
-	if (nvs_get_blob(nvh, filename, NULL, &s) != ESP_OK) {
+	ESP_ERROR_CHECK(nvs_open("wsserver", NVS_READWRITE, &nvh));
+	if (nvs_get_str(nvh, filename, NULL, &s) != ESP_OK)
+	{
 		n = 1;
 		goto bail;
 	}
 	*buf = lws_malloc(s + 1, "alloc_file");
-	if (!*buf) {
+	if (!*buf)
+	{
 		n = 2;
 		goto bail;
 	}
-	if (nvs_get_blob(nvh, filename, (char *)*buf, &s) != ESP_OK) {
+	if (nvs_get_str(nvh, filename, (char *)*buf, &s) != ESP_OK)
+	{
 		lws_free(*buf);
 		n = 1;
 		goto bail;
@@ -101,41 +102,47 @@ bail:
 }
 #else
 int alloc_file(struct lws_context *context, const char *filename, uint8_t **buf,
-		lws_filepos_t *amount)
+			   lws_filepos_t *amount)
 {
 	FILE *f;
 	size_t s;
 	int n = 0;
 
 	f = fopen(filename, "rb");
-	if (f == NULL) {
+	if (f == NULL)
+	{
 		n = 1;
 		goto bail;
 	}
 
-	if (fseek(f, 0, SEEK_END) != 0) {
+	if (fseek(f, 0, SEEK_END) != 0)
+	{
 		n = 1;
 		goto bail;
 	}
 
 	s = ftell(f);
-	if (s == (size_t)-1) {
+	if (s == (size_t)-1)
+	{
 		n = 1;
 		goto bail;
 	}
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
+	if (fseek(f, 0, SEEK_SET) != 0)
+	{
 		n = 1;
 		goto bail;
 	}
 
 	*buf = lws_malloc(s, "alloc_file");
-	if (!*buf) {
+	if (!*buf)
+	{
 		n = 2;
 		goto bail;
 	}
 
-	if (fread(*buf, s, 1, f) != 1) {
+	if (fread(*buf, s, 1, f) != 1)
+	{
 		lws_free(*buf);
 		n = 1;
 		goto bail;
@@ -148,25 +155,25 @@ bail:
 		fclose(f);
 
 	return n;
-
 }
 #endif
 
-int
-lws_tls_alloc_pem_to_der_file(struct lws_context *context, const char *filename,
-			      const char *inbuf, lws_filepos_t inlen,
-			      uint8_t **buf, lws_filepos_t *amount)
+int lws_tls_alloc_pem_to_der_file(struct lws_context *context, const char *filename,
+								  const char *inbuf, lws_filepos_t inlen,
+								  uint8_t **buf, lws_filepos_t *amount)
 {
 	const uint8_t *pem, *p, *end;
 	lws_filepos_t len;
 	uint8_t *q;
 	int n;
-
-	if (filename) {
+	if (filename)
+	{
 		n = alloc_file(context, filename, (uint8_t **)&pem, &len);
 		if (n)
 			return n;
-	} else {
+	}
+	else
+	{
 		pem = (const uint8_t *)inbuf;
 		len = inlen;
 	}
@@ -176,19 +183,25 @@ lws_tls_alloc_pem_to_der_file(struct lws_context *context, const char *filename,
 	p = pem;
 	end = p + len;
 	if (strncmp((char *)p, "-----", 5))
+	{
 		goto bail;
+	}
 	p += 5;
 	while (p < end && *p != '\n' && *p != '-')
 		p++;
 
 	if (*p != '-')
+	{
 		goto bail;
+	}
 
 	while (p < end && *p != '\n')
 		p++;
 
 	if (p >= end)
+	{
 		goto bail;
+	}
 
 	p++;
 
@@ -200,14 +213,15 @@ lws_tls_alloc_pem_to_der_file(struct lws_context *context, const char *filename,
 		q--;
 
 	if (*q != '\n')
+	{
 		goto bail;
+	}
 
 	*q = '\0';
 
 	*amount = lws_b64_decode_string((char *)p, (char *)pem,
-					(int)(long long)len);
+									(int)(long long)len);
 	*buf = (uint8_t *)pem;
-
 	return 0;
 
 bail:
@@ -216,45 +230,46 @@ bail:
 	return 4;
 }
 
-int
-lws_tls_check_cert_lifetime(struct lws_vhost *v)
+int lws_tls_check_cert_lifetime(struct lws_vhost *v)
 {
 	time_t now = (time_t)lws_now_secs(), life = 0;
 	struct lws_acme_cert_aging_args caa;
 	union lws_tls_cert_info_results ir;
 	int n;
 
-	if (v->tls.ssl_ctx && !v->tls.skipped_certs) {
+	if (v->tls.ssl_ctx && !v->tls.skipped_certs)
+	{
 
 		if (now < 1542933698) /* Nov 23 2018 00:42 UTC */
 			/* our clock is wrong and we can't judge the certs */
 			return -1;
 
 		n = lws_tls_vhost_cert_info(v, LWS_TLS_CERT_INFO_VALIDITY_TO,
-					    &ir, 0);
+									&ir, 0);
 		if (n)
 			return 1;
 
 		life = (ir.time - now) / (24 * 3600);
 		lwsl_notice("   vhost %s: cert expiry: %dd\n", v->name,
-			    (int)life);
-	} else
+					(int)life);
+	}
+	else
 		lwsl_notice("   vhost %s: no cert\n", v->name);
 
 	memset(&caa, 0, sizeof(caa));
 	caa.vh = v;
 	lws_broadcast(v->context, LWS_CALLBACK_VHOST_CERT_AGING, (void *)&caa,
-		      (size_t)(ssize_t)life);
+				  (size_t)(ssize_t)life);
 
 	return 0;
 }
 
-int
-lws_tls_check_all_cert_lifetimes(struct lws_context *context)
+int lws_tls_check_all_cert_lifetimes(struct lws_context *context)
 {
 	struct lws_vhost *v = context->vhost_list;
 
-	while (v) {
+	while (v)
+	{
 		if (lws_tls_check_cert_lifetime(v) < 0)
 			return -1;
 		v = v->vhost_next;
@@ -320,17 +335,21 @@ lws_tls_use_any_upgrade_check_extant(const char *name)
 	char buf[256];
 
 	lws_snprintf(buf, sizeof(buf) - 1, "%s.upd", name);
-	if (!lws_tls_extant(buf)) {
+	if (!lws_tls_extant(buf))
+	{
 		/* ah there is an updated file... how about the desired file? */
-		if (!lws_tls_extant(name)) {
+		if (!lws_tls_extant(name))
+		{
 			/* rename the desired file */
-			for (n = 0; n < 50; n++) {
+			for (n = 0; n < 50; n++)
+			{
 				lws_snprintf(buf, sizeof(buf) - 1,
-					     "%s.old.%d", name, n);
+							 "%s.old.%d", name, n);
 				if (!rename(name, buf))
 					break;
 			}
-			if (n == 50) {
+			if (n == 50)
+			{
 				lwsl_notice("unable to rename %s\n", name);
 
 				return LWS_TLS_EXTANT_ALTERNATIVE;
@@ -338,7 +357,8 @@ lws_tls_use_any_upgrade_check_extant(const char *name)
 			lws_snprintf(buf, sizeof(buf) - 1, "%s.upd", name);
 		}
 		/* desired file is out of the way, rename the updated file */
-		if (rename(buf, name)) {
+		if (rename(buf, name))
+		{
 			lwsl_notice("unable to rename %s to %s\n", buf, name);
 
 			return LWS_TLS_EXTANT_ALTERNATIVE;
@@ -350,17 +370,18 @@ lws_tls_use_any_upgrade_check_extant(const char *name)
 #else
 	nvs_handle nvh;
 	size_t s = 8192;
-
-	if (nvs_open("lws-station", NVS_READWRITE, &nvh)) {
+	if (nvs_open("wsserver", NVS_READWRITE, &nvh))
+	{
 		lwsl_notice("%s: can't open nvs\n", __func__);
 		return LWS_TLS_EXTANT_NO;
 	}
-
-	n = nvs_get_blob(nvh, name, NULL, &s);
+	// n = nvs_get_blob(nvh, name, NULL, &s);
+	n = nvs_get_str(nvh, name, NULL, &s);
 	nvs_close(nvh);
 
 	if (n)
 		return LWS_TLS_EXTANT_NO;
+
 #endif
 #endif
 	return LWS_TLS_EXTANT_YES;
@@ -373,7 +394,7 @@ lws_tls_use_any_upgrade_check_extant(const char *name)
  */
 enum lws_tls_extant
 lws_tls_generic_cert_checks(struct lws_vhost *vhost, const char *cert,
-			    const char *private_key)
+							const char *private_key)
 {
 	int n, m;
 
@@ -399,7 +420,8 @@ lws_tls_generic_cert_checks(struct lws_vhost *vhost, const char *cert,
 		return LWS_TLS_EXTANT_ALTERNATIVE;
 
 	if ((n == LWS_TLS_EXTANT_NO || m == LWS_TLS_EXTANT_NO) &&
-	    (vhost->options & LWS_SERVER_OPTION_IGNORE_MISSING_CERT)) {
+		(vhost->options & LWS_SERVER_OPTION_IGNORE_MISSING_CERT))
+	{
 		lwsl_notice("Ignoring missing %s or %s\n", cert, private_key);
 		vhost->tls.skipped_certs = 1;
 
@@ -420,35 +442,37 @@ lws_tls_generic_cert_checks(struct lws_vhost *vhost, const char *cert,
 
 LWS_VISIBLE int
 lws_tls_cert_updated(struct lws_context *context, const char *certpath,
-		     const char *keypath,
-		     const char *mem_cert, size_t len_mem_cert,
-		     const char *mem_privkey, size_t len_mem_privkey)
+					 const char *keypath,
+					 const char *mem_cert, size_t len_mem_cert,
+					 const char *mem_privkey, size_t len_mem_privkey)
 {
 	struct lws wsi;
 
 	wsi.context = context;
 
-	lws_start_foreach_ll(struct lws_vhost *, v, context->vhost_list) {
+	lws_start_foreach_ll(struct lws_vhost *, v, context->vhost_list)
+	{
 		wsi.vhost = v; /* not a real bound wsi */
 		if (v->tls.alloc_cert_path && v->tls.key_path &&
-		    !strcmp(v->tls.alloc_cert_path, certpath) &&
-		    !strcmp(v->tls.key_path, keypath)) {
+			!strcmp(v->tls.alloc_cert_path, certpath) &&
+			!strcmp(v->tls.key_path, keypath))
+		{
 			lws_tls_server_certs_load(v, &wsi, certpath, keypath,
-						  mem_cert, len_mem_cert,
-						  mem_privkey, len_mem_privkey);
+									  mem_cert, len_mem_cert,
+									  mem_privkey, len_mem_privkey);
 
 			if (v->tls.skipped_certs)
 				lwsl_notice("%s: vhost %s: cert unset\n",
-					    __func__, v->name);
+							__func__, v->name);
 		}
-	} lws_end_foreach_ll(v, vhost_next);
+	}
+	lws_end_foreach_ll(v, vhost_next);
 
 	return 0;
 }
 #endif
 
-int
-lws_gate_accepts(struct lws_context *context, int on)
+int lws_gate_accepts(struct lws_context *context, int on)
 {
 	struct lws_vhost *v = context->vhost_list;
 
@@ -458,10 +482,11 @@ lws_gate_accepts(struct lws_context *context, int on)
 	context->updated = 1;
 #endif
 
-	while (v) {
+	while (v)
+	{
 		if (v->tls.use_ssl && v->lserv_wsi &&
-		    lws_change_pollfd(v->lserv_wsi, (LWS_POLLIN) * !on,
-				      (LWS_POLLIN) * on))
+			lws_change_pollfd(v->lserv_wsi, (LWS_POLLIN) * !on,
+							  (LWS_POLLIN)*on))
 			lwsl_notice("Unable to set accept POLLIN %d\n", on);
 
 		v = v->vhost_next;
@@ -472,26 +497,31 @@ lws_gate_accepts(struct lws_context *context, int on)
 
 /* comma-separated alpn list, like "h2,http/1.1" to openssl alpn format */
 
-int
-lws_alpn_comma_to_openssl(const char *comma, uint8_t *os, int len)
+int lws_alpn_comma_to_openssl(const char *comma, uint8_t *os, int len)
 {
 	uint8_t *oos = os, *plen = NULL;
 
-	while (*comma && len > 1) {
-		if (!plen && *comma == ' ') {
+	while (*comma && len > 1)
+	{
+		if (!plen && *comma == ' ')
+		{
 			comma++;
 			continue;
 		}
-		if (!plen) {
+		if (!plen)
+		{
 			plen = os++;
 			len--;
 		}
 
-		if (*comma == ',') {
+		if (*comma == ',')
+		{
 			*plen = lws_ptr_diff(os, plen + 1);
 			plen = NULL;
 			comma++;
-		} else {
+		}
+		else
+		{
 			*os++ = *comma++;
 			len--;
 		}
@@ -502,4 +532,3 @@ lws_alpn_comma_to_openssl(const char *comma, uint8_t *os, int len)
 
 	return lws_ptr_diff(os, oos);
 }
-
