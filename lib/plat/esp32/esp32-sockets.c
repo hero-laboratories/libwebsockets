@@ -21,12 +21,11 @@
 
 #include "core/private.h"
 
-int
-lws_send_pipe_choked(struct lws *wsi)
+int lws_send_pipe_choked(struct lws *wsi)
 {
 	struct lws *wsi_eff = wsi;
 	fd_set writefds;
-	struct timeval tv = { 0, 0 };
+	struct timeval tv = {0, 0};
 	int n;
 #if defined(LWS_WITH_HTTP2)
 	wsi_eff = lws_get_network_wsi(wsi);
@@ -38,8 +37,8 @@ lws_send_pipe_choked(struct lws *wsi)
 	/* treat the fact we got a truncated send pending as if we're choked */
 	if (lws_has_buffered_out(wsi)
 #if defined(LWS_WITH_HTTP_STREAM_COMPRESSION)
-	    || wsi->http.comp_ctx.buflist_comp ||
-	       wsi->http.comp_ctx.may_have_more
+		|| wsi->http.comp_ctx.buflist_comp ||
+		wsi->http.comp_ctx.may_have_more
 #endif
 	)
 		return 1;
@@ -54,11 +53,10 @@ lws_send_pipe_choked(struct lws *wsi)
 	return !n; /* n = 0 = not writable = choked */
 }
 
-int
-lws_poll_listen_fd(struct lws_pollfd *fd)
+int lws_poll_listen_fd(struct lws_pollfd *fd)
 {
 	fd_set readfds;
-	struct timeval tv = { 0, 0 };
+	struct timeval tv = {0, 0};
 
 	FD_ZERO(&readfds);
 	FD_SET(fd->fd, &readfds);
@@ -66,39 +64,37 @@ lws_poll_listen_fd(struct lws_pollfd *fd)
 	return select(fd->fd + 1, &readfds, NULL, NULL, &tv);
 }
 
-int
-lws_plat_check_connection_error(struct lws *wsi)
+int lws_plat_check_connection_error(struct lws *wsi)
 {
 	return 0;
 }
 
-
-int
-lws_plat_set_socket_options(struct lws_vhost *vhost, int fd, int unix_skt)
+int lws_plat_set_socket_options(struct lws_vhost *vhost, int fd, int unix_skt)
 {
 	int optval = 1;
 	socklen_t optlen = sizeof(optval);
 
-#if defined(__APPLE__) || \
-    defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
-    defined(__NetBSD__) || \
-    defined(__OpenBSD__)
+#if defined(__APPLE__) ||                                  \
+	defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
+	defined(__NetBSD__) ||                                 \
+	defined(__OpenBSD__)
 	struct protoent *tcp_proto;
 #endif
 
-	if (vhost->ka_time) {
+	if (vhost->ka_time)
+	{
 		/* enable keepalive on this socket */
 		optval = 1;
 		if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE,
-			       (const void *)&optval, optlen) < 0)
+					   (const void *)&optval, optlen) < 0)
 			return 1;
 
-#if defined(__APPLE__) || \
-    defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
-    defined(__NetBSD__) || \
-        defined(__CYGWIN__) || defined(__OpenBSD__) || defined (__sun)
+#if defined(__APPLE__) ||                                  \
+	defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
+	defined(__NetBSD__) ||                                 \
+	defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__sun)
 
-		/*
+			/*
 		 * didn't find a way to set these per-socket, need to
 		 * tune kernel systemwide values
 		 */
@@ -106,20 +102,24 @@ lws_plat_set_socket_options(struct lws_vhost *vhost, int fd, int unix_skt)
 		/* set the keepalive conditions we want on it too */
 		optval = vhost->ka_time;
 		if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE,
-			       (const void *)&optval, optlen) < 0)
+					   (const void *)&optval, optlen) < 0)
 			return 1;
 
 		optval = vhost->ka_interval;
 		if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL,
-			       (const void *)&optval, optlen) < 0)
+					   (const void *)&optval, optlen) < 0)
 			return 1;
 
 		optval = vhost->ka_probes;
 		if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT,
-			       (const void *)&optval, optlen) < 0)
+					   (const void *)&optval, optlen) < 0)
 			return 1;
 #endif
 	}
+	/* Reuse port */
+	optval = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
+		return 1;
 
 	/* Disable Nagle */
 	optval = 1;
@@ -135,9 +135,8 @@ lws_plat_set_socket_options(struct lws_vhost *vhost, int fd, int unix_skt)
 
 /* cast a struct sockaddr_in6 * into addr for ipv6 */
 
-int
-lws_interface_to_sa(int ipv6, const char *ifname, struct sockaddr_in *addr,
-		    size_t addrlen)
+int lws_interface_to_sa(int ipv6, const char *ifname, struct sockaddr_in *addr,
+						size_t addrlen)
 {
 #if 0
 	int rc = LWS_ITOSA_NOT_EXIST;
@@ -214,12 +213,7 @@ lws_plat_inet_ntop(int af, const void *src, char *dst, int cnt)
 	return inet_ntop(af, src, dst, cnt);
 }
 
-int
-lws_plat_inet_pton(int af, const char *src, void *dst)
+int lws_plat_inet_pton(int af, const char *src, void *dst)
 {
 	return 1; //  inet_pton(af, src, dst);
 }
-
-
-
-

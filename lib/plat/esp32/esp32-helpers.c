@@ -1297,12 +1297,9 @@ void lws_esp32_update_acme_info(void)
 struct lws_context *
 lws_esp32_init(struct lws_context_creation_info *info, struct lws_vhost **pvh)
 {
-	const esp_partition_t *part = lws_esp_ota_get_boot_partition();
 	struct lws_context *context;
-	struct lws_esp32_image i;
 	struct lws_vhost *vhost;
 	struct lws wsi;
-	char buf[512];
 
 	context = lws_create_context(info);
 	if (context == NULL)
@@ -1310,21 +1307,6 @@ lws_esp32_init(struct lws_context_creation_info *info, struct lws_vhost **pvh)
 		lwsl_err("Failed to create context\n");
 		return NULL;
 	}
-	//HL_CHANGE
-	//lws_esp32_get_image_info(part, &i, buf, sizeof(buf) - 1);
-
-	//lws_esp32_romfs = (romfs_t)i.romfs;
-	//if (!romfs_mount_check(lws_esp32_romfs)) {
-	//	lwsl_err("mount error on ROMFS at %p 0x%x\n", lws_esp32_romfs,
-	//		 i.romfs);
-	//	return NULL;
-	//}
-
-	//lwsl_notice("ROMFS length %uKiB\n", i.romfs_len >> 10);
-
-	//puts(buf);
-
-	/* set the lws vfs to use our romfs */
 
 	lws_set_fops(context, &fops);
 
@@ -1338,9 +1320,6 @@ lws_esp32_init(struct lws_context_creation_info *info, struct lws_vhost **pvh)
 		return NULL;
 	}
 
-	lws_esp32_update_acme_info();
-
-	// lws_esp32_selfsigned(vhost);
 	wsi.context = vhost->context;
 	wsi.vhost = vhost;
 
