@@ -1148,7 +1148,8 @@ _rngf(void *context, unsigned char *buf, size_t len)
 	return -1;
 }
 
-int lws_esp32_selfsigned(struct lws_vhost *vhost)
+int lws_esp32_selfsigned(struct lws_vhost *vhost,
+						 const char *ssl_cert, const char *ssl_private_key)
 {
 	mbedtls_x509write_cert crt;
 	char subject[200];
@@ -1172,9 +1173,9 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 	}
 
 	n = 0;
-	if (!nvs_get_blob(nvh, vhost->tls.alloc_cert_path, NULL, &s))
+	if (!nvs_get_str(nvh, ssl_cert, NULL, &s))
 		n |= 1;
-	if (!nvs_get_blob(nvh, vhost->tls.key_path, NULL, &s))
+	if (!nvs_get_str(nvh, ssl_private_key, NULL, &s))
 		n |= 2;
 
 	nvs_close(nvh);
@@ -1184,6 +1185,9 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 		free(buf);
 		return 0; /* certs already exist */
 	}
+
+	memcpy(vhost->tls.alloc_cert_path, ssl_cert, strlen(ssl_cert));
+	memcpy(vhost->tls.key_path, ssl_private_key, strlen(ssl_private_key));
 
 	lwsl_notice("%s: creating selfsigned initial certs\n", __func__);
 
@@ -1210,7 +1214,7 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 	/* subject must be formatted like "C=TW,O=warmcat,CN=myserver" */
 
 	lws_snprintf(subject, sizeof(subject) - 1,
-				 "C=TW,ST=New Taipei City,L=Taipei,O=warmcat,CN=%s",
+				 "C=UK,O=HL,CN=%s",
 				 lws_esp32.hostname);
 
 	if (mbedtls_x509write_crt_set_subject_name(&crt, subject))
@@ -1234,8 +1238,8 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 	mbedtls_x509write_crt_set_serial(&crt, &mpi);
 	mbedtls_mpi_free(&mpi);
 
-	mbedtls_x509write_crt_set_validity(&crt, "20171105235959",
-									   "20491231235959");
+	mbedtls_x509write_crt_set_validity(&crt, "20191105235959",
+									   "20691231235959");
 
 	mbedtls_x509write_crt_set_key_usage(&crt,
 										MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
@@ -1250,7 +1254,6 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 		lwsl_notice("%s: write crt der failed\n", __func__);
 		goto fail1;
 	}
-
 	lws_plat_write_cert(vhost, 0, 0, buf, strlen((const char *)buf));
 
 	if (mbedtls_pk_write_key_pem(&mpk, buf, buf_size))
@@ -1258,7 +1261,6 @@ int lws_esp32_selfsigned(struct lws_vhost *vhost)
 		lwsl_notice("write key pem failed\n");
 		goto fail1;
 	}
-
 	lws_plat_write_cert(vhost, 1, 0, buf, strlen((const char *)buf));
 
 	mbedtls_pk_free(&mpk);
@@ -1319,6 +1321,9 @@ lws_esp32_init(struct lws_context_creation_info *info, struct lws_vhost **pvh)
 		lwsl_err("Failed to create vhost\n");
 		return NULL;
 	}
+
+	lws_esp32_selfsigned(vhost, info->ssl_cert_filepath,
+						 info->ssl_private_key_filepath);
 
 	wsi.context = vhost->context;
 	wsi.vhost = vhost;

@@ -153,13 +153,13 @@ lws_plat_write_file(const char *filename, void *buf, int len)
 		return -1;
 	}
 
-	n = nvs_set_blob(nvh, filename, buf, len);
-	if (n >= 0)
+	n = nvs_set_str(nvh, filename, (const char *)buf /* , len */);
+	if (n == 0)
 		nvs_commit(nvh);
 
 	nvs_close(nvh);
 
-	lwsl_notice("%s: wrote %s (%d)\n", __func__, filename, n);
+	lwsl_notice("%s: wrote %s (EC %x)\n", __func__, filename, n);
 
 	return n;
 }
